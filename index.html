@@ -289,14 +289,15 @@ function toggle3d(cid){
       mv.setAttribute('touch-action','pan-y');
       mv.setAttribute('shadow-intensity','1');
       mv.style.cssText = 'width:100%;aspect-ratio:4/3;background:#0e0e11;display:block';
-      box.appendChild(mv);
+      const dts = document.getElementById(cid+'-dots');
+      if(dts) box.insertBefore(mv, dts); else box.appendChild(mv);
     }
     mv.style.display='block';
     if(img) img.style.display='none';
-    if(hint) hint.style.display='none';
-    ['-prev','-next','-dots'].forEach(s=>{ const e=document.getElementById(cid+s); if(e) e.style.display='none'; });
-    if(btn) btn.textContent='📷 الصور';
     st.mode='3d';
+    if(btn) btn.textContent='📷 الصور';
+    cardShow(cid);
+    if(hint) hint.style.display='none';
   } else {
     const mv = document.getElementById(cid+'-mv');
     if(mv) mv.style.display='none';
@@ -320,10 +321,10 @@ function cardShow(cid){
   if(R) R.style.display = (n>1 && photos) ? 'flex' : 'none';
   const dots = document.getElementById(cid+'-dots');
   if(dots){
-    if(n>1 && photos){
+    if(n>1){
       dots.style.display = 'flex';
       dots.innerHTML = n<=12
-        ? Array.from({length:n},(_,i)=>`<i style="width:${i===cur?7:5}px;height:${i===cur?7:5}px;border-radius:50%;background:${i===cur?'#fff':'rgba(255,255,255,.35)'};transition:all .2s"></i>`).join('')
+        ? Array.from({length:n},(_,i)=>`<span onclick="cardGoto('${cid}',${i})" onpointerdown="event.stopPropagation()" style="padding:5px 3px;cursor:pointer;display:flex;align-items:center"><i style="display:block;width:${i===cur&&photos?8:6}px;height:${i===cur&&photos?8:6}px;border-radius:50%;background:${i===cur&&photos?'#fff':'rgba(255,255,255,.4)'};transition:all .2s"></i></span>`).join('')
         : `<span style="font-size:11px;color:rgba(255,255,255,.7);font-weight:700">${cur+1} / ${n}</span>`;
     } else dots.style.display = 'none';
   }
@@ -331,6 +332,11 @@ function cardShow(cid){
 function cardStep(cid, d){
   const st = CARD_ST[cid]; if(!st || st.frames.length<2) return;
   st.idx += d; cardShow(cid);
+}
+function cardGoto(cid, i){
+  const st = CARD_ST[cid]; if(!st) return;
+  if(st.mode === '3d') toggle3d(cid);
+  st.idx = i; cardShow(cid);
 }
 function pickColor(cid, ci){
   const st = CARD_ST[cid]; if(!st) return;
@@ -349,7 +355,7 @@ function pickColor(cid, ci){
 function initSpin(cid){
   const el = document.getElementById(cid); if(!el) return;
   let sx = null, sIdx = 0;
-  el.addEventListener('pointerdown', e=>{ const st=CARD_ST[cid]; if(!st||st.frames.length<2) return; sx=e.clientX; sIdx=st.idx; try{el.setPointerCapture(e.pointerId);}catch(_){} });
+  el.addEventListener('pointerdown', e=>{ const st=CARD_ST[cid]; if(!st||st.frames.length<2||st.mode==='3d') return; sx=e.clientX; sIdx=st.idx; try{el.setPointerCapture(e.pointerId);}catch(_){} });
   el.addEventListener('pointermove', e=>{ const st=CARD_ST[cid]; if(sx==null||!st) return; const step=Math.round((e.clientX-sx)/38); if(st.idx!==sIdx-step){ st.idx=sIdx-step; cardShow(cid); } });
   const end = ()=>{ sx=null; };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
@@ -372,10 +378,10 @@ function bikeCard(c){
   const viewer = (imgs.length||glb) ? `<div id="${cid}" style="position:relative;touch-action:pan-y;user-select:none">
       <img class="card-img" id="${cid}-img" src="${esc(imgs[0]||'')}" alt="" loading="lazy" draggable="false" onerror="this.style.display='none'">
       <div id="${cid}-hint" style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;border-radius:20px;padding:3px 9px;pointer-events:none;${imgs.length>1?'':'display:none'}">↻ اسحب الصورة تلف 360°</div>
-      <button id="${cid}-prev" onclick="cardStep('${cid}',-1)" style="position:absolute;top:44%;left:6px;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;font-weight:900;cursor:pointer;display:${imgs.length>1?'flex':'none'};align-items:center;justify-content:center;line-height:1;padding:0 0 3px 0">‹</button>
-      <button id="${cid}-next" onclick="cardStep('${cid}',1)" style="position:absolute;top:44%;right:6px;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;font-weight:900;cursor:pointer;display:${imgs.length>1?'flex':'none'};align-items:center;justify-content:center;line-height:1;padding:0 0 3px 0">›</button>
-      ${glb?`<button id="${cid}-3d" onclick="toggle3d('${cid}')" style="position:absolute;top:6px;left:6px;background:linear-gradient(135deg,#4A90D9,#2E6DB4);border:1px solid rgba(255,255,255,.5);color:#fff;font-size:12px;font-weight:900;border-radius:20px;padding:4px 13px;cursor:pointer;letter-spacing:.5px;box-shadow:0 2px 8px rgba(0,0,0,.4)">🧊 3D</button>`:''}
-      <div id="${cid}-dots" style="display:${imgs.length>1?'flex':'none'};gap:5px;align-items:center;justify-content:center;padding:8px 0 2px"></div>
+      <button id="${cid}-prev" onclick="cardStep('${cid}',-1)" onpointerdown="event.stopPropagation()" style="position:absolute;top:44%;left:6px;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;font-weight:900;cursor:pointer;display:${imgs.length>1?'flex':'none'};align-items:center;justify-content:center;line-height:1;padding:0 0 3px 0">‹</button>
+      <button id="${cid}-next" onclick="cardStep('${cid}',1)" onpointerdown="event.stopPropagation()" style="position:absolute;top:44%;right:6px;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:18px;font-weight:900;cursor:pointer;display:${imgs.length>1?'flex':'none'};align-items:center;justify-content:center;line-height:1;padding:0 0 3px 0">›</button>
+      ${glb?`<button id="${cid}-3d" onclick="toggle3d('${cid}')" onpointerdown="event.stopPropagation()" style="position:absolute;top:6px;left:6px;background:linear-gradient(135deg,#4A90D9,#2E6DB4);border:1px solid rgba(255,255,255,.5);color:#fff;font-size:12px;font-weight:900;border-radius:20px;padding:4px 13px;cursor:pointer;letter-spacing:.5px;box-shadow:0 2px 8px rgba(0,0,0,.4);z-index:3">🧊 3D</button>`:''}
+      <div id="${cid}-dots" onpointerdown="event.stopPropagation()" style="display:${imgs.length>1?'flex':'none'};gap:2px;align-items:center;justify-content:center;padding:5px 0 1px"></div>
     </div>` : '';
   row.innerHTML = `<div class="card">
     ${viewer}
