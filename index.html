@@ -338,10 +338,51 @@ function cardGoto(cid, i){
   if(st.mode === '3d') toggle3d(cid);
   st.idx = i; cardShow(cid);
 }
+function videoEmbedUrl(u){
+  try{
+    const url = new URL(u);
+    const h = url.hostname.replace(/^www\./,'');
+    if(h==='vimeo.com' || h==='player.vimeo.com'){
+      const parts = url.pathname.split('/').filter(Boolean);
+      const id = parts.find(p=>/^\d+$/.test(p));
+      if(id){
+        const hash = parts[parts.indexOf(id)+1];
+        return 'https://player.vimeo.com/video/'+id+((hash && /^[a-f0-9]+$/i.test(hash)) ? '?h='+hash+'&' : '?')+'autoplay=1';
+      }
+    }
+    if(h==='youtube.com' || h==='m.youtube.com'){
+      const v = url.searchParams.get('v') || ((url.pathname.startsWith('/shorts/')||url.pathname.startsWith('/embed/')) ? url.pathname.split('/')[2] : '');
+      if(v) return 'https://www.youtube.com/embed/'+v+'?autoplay=1&playsinline=1';
+    }
+    if(h==='youtu.be'){
+      const v = url.pathname.split('/').filter(Boolean)[0];
+      if(v) return 'https://www.youtube.com/embed/'+v+'?autoplay=1&playsinline=1';
+    }
+    if(/\.(mp4|webm|mov)(\?|$)/i.test(u)) return u;
+  }catch(e){}
+  return null;
+}
 function openBikeVideo(cid){
   const st = CARD_ST[cid];
   if(!st || !Array.isArray(st.videos) || !st.videos.length) return;
-  window.open(st.videos[0], '_blank', 'noopener');
+  const raw = String(st.videos[0]).replace(/"/g,'%22');
+  const emb = videoEmbedUrl(raw);
+  const old = document.getElementById('vid-modal'); if(old) old.remove();
+  const wrap = document.createElement('div');
+  wrap.id = 'vid-modal';
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:14px';
+  const inner = emb
+    ? (/\.(mp4|webm|mov)(\?|$)/i.test(emb)
+        ? `<video src="${emb}" controls autoplay playsinline style="width:100%;height:100%;background:#000;border-radius:12px"></video>`
+        : `<iframe src="${emb}" style="width:100%;height:100%;border:0;border-radius:12px;background:#000" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`)
+    : `<div style="color:#fff;text-align:center;padding:30px;font-size:14px">مش قادر أشغّل الفيديو هنا — <a href="${raw}" target="_blank" rel="noopener" style="color:#E8C97A">افتحه من اللينك ده</a></div>`;
+  wrap.innerHTML = `
+    <div style="width:min(920px,96vw);aspect-ratio:16/9;position:relative">${inner}
+      <button onclick="document.getElementById('vid-modal').remove()" style="position:absolute;top:-14px;left:-6px;background:#E05555;border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5)">✕</button>
+    </div>
+    <a href="${raw}" target="_blank" rel="noopener" style="color:rgba(255,255,255,.5);font-size:11px;margin-top:10px;text-decoration:none">لو الفيديو مش شغال — افتحه فى صفحة لوحدها ↗</a>`;
+  wrap.addEventListener('click', e=>{ if(e.target===wrap) wrap.remove(); });
+  document.body.appendChild(wrap);
 }
 function pickColor(cid, ci){
   const st = CARD_ST[cid]; if(!st) return;
