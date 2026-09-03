@@ -169,7 +169,7 @@ body{
       <div class="hd-name" id="hdName">أبو حوا للموتوسيكلات</div>
       <div class="hd-sub" id="hdSub">اسأل عن أى موديل — الرد فورى</div>
     </div>
-    <button class="icon-btn" id="meBtn" onclick="openMe()" title="حسابى" style="display:none">👤</button>
+    <button class="icon-btn" id="meBtn" onclick="ME ? openMe() : openAuth('login')" title="حسابى" style="width:auto;padding:0 12px;font-size:12.5px;font-weight:800;white-space:nowrap">👤 دخول</button>
   </header>
 
   <main class="feed" id="feed"></main>
@@ -695,7 +695,7 @@ async function loadMe(){
   if(!TOKEN) return;
   try{
     ME = await rpc('consumer_me', { p_token: TOKEN });
-    $('meBtn').style.display = '';
+    $('meBtn').textContent = '👤 حسابى';
     $('clipBtn').style.display = 'flex';
     $('hdSub').textContent = 'أهلاً ' + ME.name.split(' ')[0];
   }catch(e){
@@ -716,7 +716,7 @@ function openMe(){
 async function logout(){
   try{ await rpc('consumer_logout', { p_token: TOKEN }); }catch(e){}
   TOKEN=''; ME=null; localStorage.removeItem('hawa_shop_token');
-  $('meBtn').style.display='none'; $('clipBtn').style.display='none'; closeSheet();
+  $('meBtn').textContent='👤 دخول'; $('clipBtn').style.display='none'; closeSheet();
   $('hdSub').textContent = (BRAND && BRAND.tagline) || 'اسأل عن أى موديل — الرد فورى';
 }
 
